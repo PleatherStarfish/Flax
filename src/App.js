@@ -28,10 +28,17 @@ function App() {
 
     const dragHandlers = {onStart: onStart, onStop: onStop};
 
+    const deleteObject = (e) => {
+        e.preventDefault();
+        const removeId = e.target.parentNode.id.replace('delete-','');
+        console.log(objectsInCanvas[0]);
+        setObjectsInCanvas(objectsInCanvas.filter(item => item.id !== removeId));
+    };
+
     const creatObjectOnCanvas = (e, type) => {
         e.preventDefault();
         if (type === "oscillator") {
-            setObjectsInCanvas(oldArray => [...oldArray, oscillator(dragHandlers)])
+            setObjectsInCanvas(oldArray => [...oldArray, oscillator(dragHandlers, deleteObject)])
         }
     };
 
