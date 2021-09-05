@@ -1,28 +1,32 @@
 import logo from './logo.svg';
 import './App.css';
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {Container, Row, Col, Button} from "react-bootstrap"
-import oscillator from './components/oscillator'
+import Oscillator from './components/oscillator'
 import Draggable, {DraggableCore} from 'react-draggable';
 import uniqid from 'uniqid';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import randomColor from 'randomcolor';
 
 function App() {
-    const [objectsInCanvas, setObjectsInCanvas] = useState([]);
+    const [objectsInCanvas, setObjectsInCanvas] = useState(new Map());
     const [deltaPositionX, setDeltaPositionX] = useState(null);
     const [deltaPositionY, setDeltaPositionY] = useState(null);
     const [activeDrags, setActiveDrags] = useState(0);
+    const [activePatchCordOnMouse, setActiveactivePatchCordOnMouse] = useState(null);
 
     const onDrag = (e, ui) => {
         setDeltaPositionX(deltaPosX => deltaPosX + 1);
         setDeltaPositionY(deltaPosY => deltaPosY + 1);
     };
 
-    const onStart = () => {
+    const onStart = (e) => {
+        console.log(e.target.id);
+        console.log(objectsInCanvas);
         setActiveDrags(prevCount => prevCount + 1);
     };
 
-    const onStop = () => {
+    const onStop = (e) => {
         setActiveDrags(prevCount => prevCount - 1);
     };
 
@@ -31,16 +35,29 @@ function App() {
     const deleteObject = (e) => {
         e.preventDefault();
         const removeId = e.target.parentNode.id.replace('delete-','');
-        console.log(objectsInCanvas[0]);
-        setObjectsInCanvas(objectsInCanvas.filter(item => item.id !== removeId));
+        const newItemsInCanvas = new Map([...objectsInCanvas].filter(([k]) => k !== removeId));
+        setObjectsInCanvas(newItemsInCanvas);
+    };
+
+    const handleJackClick = (e, id) => {
+        e.preventDefault();
+        setActiveactivePatchCordOnMouse(e.target.id)
     };
 
     const creatObjectOnCanvas = (e, type) => {
-        e.preventDefault();
+        const oscId = uniqid();
+        const objectColor = randomColor({luminosity: 'light'});
+
         if (type === "oscillator") {
-            setObjectsInCanvas(oldArray => [...oldArray, oscillator(dragHandlers, deleteObject)])
+            setObjectsInCanvas(new Map(objectsInCanvas.set(oscId, {
+                "color": objectColor,
+                "dom_node": <Oscillator dragHandlers={dragHandlers} deleteObject={deleteObject} handleJackClick={handleJackClick} key={oscId} keyId={oscId} color={objectColor}/>,
+                "z-index": 0,
+            })));
         }
     };
+
+    useEffect(() => console.log(objectsInCanvas.keys()), []);
 
     return (
         <Container fluid style={{margin: "2vh 0"}}>
@@ -57,7 +74,9 @@ function App() {
                     <div className="canvas"
                          style={{height: '100%', width: '100%', position: 'relative', overflow: 'auto', padding: '0'}}>
                         <div style={{height: '100%', width: '100%', padding: '10px'}}>
-                            { objectsInCanvas }
+                            { [...objectsInCanvas.keys()].map(k => (
+                                objectsInCanvas.get(k)["dom_node"]
+                            )) }
                         </div>
                     </div>
 
