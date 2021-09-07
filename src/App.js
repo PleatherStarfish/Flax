@@ -1,12 +1,13 @@
 import logo from './logo.svg';
 import './App.css';
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useCallback} from "react";
 import {Container, Row, Col, Button} from "react-bootstrap"
 import Oscillator from './components/oscillator'
-import Draggable, {DraggableCore} from 'react-draggable';
 import uniqid from 'uniqid';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import randomColor from 'randomcolor';
+import updateObjectLocation from './lib/updateObjectLocation.js'
+import updateDragging from './lib/updateDragging.js'
 
 function App() {
     const [objectsInCanvas, setObjectsInCanvas] = useState(new Map());
@@ -14,29 +15,46 @@ function App() {
     const [deltaPositionY, setDeltaPositionY] = useState(null);
     const [activeDrags, setActiveDrags] = useState(0);
     const [activePatchCordOnMouse, setActiveactivePatchCordOnMouse] = useState(null);
+    const [state, setState] = useState({isDragging: false});
+    const [deltaPosition, setDeltaPosition] = useState({x: 0, y: 0});
 
-    const onDrag = (e, ui) => {
-        setDeltaPositionX(deltaPosX => deltaPosX + 1);
-        setDeltaPositionY(deltaPosY => deltaPosY + 1);
+    const onDrag = useCallback((e, ui) => {
+        if (state) {
+            const objectId = e.target.id;
+        }
+        // updateObjectLocation(objectsInCanvas, objectId, "deltaPosition", ui)
+        // setObjectsInCanvas(updateObjectLocation(objectsInCanvas, objectId, "deltaPosition", ui));
+    }, [state]);
+
+    const handleDrag = (e, ui) => {
+        setDeltaPosition((prevState) => ({
+            x: prevState.x + ui.deltaX,
+            y: prevState.y + ui.deltaY,
+        }));
     };
 
-    const onStart = (e) => {
-        console.log(e.target.id);
-        console.log(objectsInCanvas);
-        setActiveDrags(prevCount => prevCount + 1);
-    };
 
-    const onStop = (e) => {
-        setActiveDrags(prevCount => prevCount - 1);
-    };
+    const onStart = useCallback(() => {
+        setState(prevState => ({
+            ...prevState,
+            isDragging: true
+        }));
+    }, []);
+
+    const onStop = useCallback(() => {
+        setState(prevState => ({
+            ...prevState,
+            isDragging: false
+        }));
+    }, []);
 
     const dragHandlers = {onStart: onStart, onStop: onStop};
 
     const deleteObject = (e) => {
         e.preventDefault();
-        const removeId = e.target.parentNode.id.replace('delete-','');
-        const newItemsInCanvas = new Map([...objectsInCanvas].filter(([k]) => k !== removeId));
-        setObjectsInCanvas(newItemsInCanvas);
+        // const removeId = e.target.parentNode.id.replace('delete-','');
+        // const newItemsInCanvas = new Map([...objectsInCanvas].filter(([key]) => key !== removeId));
+        // setObjectsInCanvas(newItemsInCanvas);
     };
 
     const handleJackClick = (e, id) => {
@@ -44,20 +62,24 @@ function App() {
         setActiveactivePatchCordOnMouse(e.target.id)
     };
 
-    const creatObjectOnCanvas = (e, type) => {
+    const creatObjectOnCanvas = useCallback((e, type) => {
         const oscId = uniqid();
         const objectColor = randomColor({luminosity: 'light'});
+        const newOscillator = new Map();
+        newOscillator.set(oscId, {
+            "color": objectColor,
+            "dom_node": <Oscillator handleDrag={handleDrag} dragHandlers={dragHandlers} deleteObject={deleteObject} handleJackClick={handleJackClick} key={oscId} keyId={oscId} color={objectColor}/>,
+            "z-index": 0,
+            "deltaPosition": {x: 0, y: 0},
+            "isDragging": false,
+        });
 
         if (type === "oscillator") {
-            setObjectsInCanvas(new Map(objectsInCanvas.set(oscId, {
-                "color": objectColor,
-                "dom_node": <Oscillator dragHandlers={dragHandlers} deleteObject={deleteObject} handleJackClick={handleJackClick} key={oscId} keyId={oscId} color={objectColor}/>,
-                "z-index": 0,
-            })));
+            setObjectsInCanvas(new Map([...objectsInCanvas, ...newOscillator]));
         }
-    };
+    }, []);
 
-    useEffect(() => console.log(objectsInCanvas.keys()), []);
+    useEffect(() => console.log(deltaPosition.x.toFixed(0), deltaPosition.y.toFixed(0)), [deltaPosition]);
 
     return (
         <Container fluid style={{margin: "2vh 0"}}>
@@ -74,8 +96,8 @@ function App() {
                     <div className="canvas"
                          style={{height: '100%', width: '100%', position: 'relative', overflow: 'auto', padding: '0'}}>
                         <div style={{height: '100%', width: '100%', padding: '10px'}}>
-                            { [...objectsInCanvas.keys()].map(k => (
-                                objectsInCanvas.get(k)["dom_node"]
+                            { [...objectsInCanvas.keys()].map(key => (
+                                objectsInCanvas.get(key)["dom_node"]
                             )) }
                         </div>
                     </div>
